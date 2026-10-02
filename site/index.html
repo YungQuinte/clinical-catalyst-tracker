@@ -19,6 +19,7 @@
       --yellow: #f4c95d;
       --red: #ff7b72;
       --purple: #c59cff;
+      --orange: #ffb86b;
     }
 
     * { box-sizing: border-box; }
@@ -44,7 +45,7 @@
 
     .stats {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 12px;
       margin: 22px 0;
     }
@@ -131,6 +132,10 @@
     }
 
     .verified { border-color: rgba(88,214,141,.4); color: var(--green); background: rgba(88,214,141,.08); }
+    .review { border-color: rgba(255,184,107,.45); color: var(--orange); background: rgba(255,184,107,.08); }
+    .high { color: var(--green); }
+    .medium { color: var(--yellow); }
+    .low { color: var(--muted); }
     .soon { color: var(--yellow); }
     .past { color: #b6c3d3; }
     .phase3 { color: var(--purple); }
@@ -188,13 +193,15 @@
 
   <div class="notice">
     <strong>Important:</strong> a ClinicalTrials.gov <em>Primary Completion Date</em> is not the same as a
-    public topline-results date. Treat automatically discovered trials as candidates. A green
-    <strong>Verified readout</strong> badge means you manually added company-guided timing and a source.
+    public topline-results date. Orange <strong>Review guidance</strong> flags are automatic keyword matches
+    from SEC filings or mapped company IR pages; they are <strong>not confirmed dates</strong>. Open the source,
+    verify that it refers to this exact program, then add confirmed timing to <code>manual_catalysts.csv</code>.
   </div>
 
   <div class="stats">
     <div class="stat"><div class="n" id="statTotal">—</div><div class="l">Visible candidates</div></div>
     <div class="stat"><div class="n" id="statVerified">—</div><div class="l">Verified readouts</div></div>
+    <div class="stat"><div class="n" id="statReview">—</div><div class="l">Guidance flags to review</div></div>
     <div class="stat"><div class="n" id="stat30">—</div><div class="l">Primary completion ±30 days</div></div>
     <div class="stat"><div class="n" id="statP3">—</div><div class="l">Phase 3 candidates</div></div>
   </div>
@@ -218,8 +225,10 @@
 
     <select id="verified">
       <option value="">All candidates</option>
+      <option value="review">Needs guidance review</option>
       <option value="yes">Verified readout only</option>
       <option value="no">Unverified only</option>
+      <option value="mapped">Mapped public companies</option>
     </select>
 
     <select id="sort">
@@ -242,6 +251,7 @@
           <th>Enrollment</th>
           <th>Primary completion</th>
           <th>Expected readout</th>
+          <th>Auto guidance scan</th>
           <th>Trial</th>
         </tr>
       </thead>
@@ -315,6 +325,59 @@ function readoutCell(t) {
   return `<strong>${esc(t.expected_readout)}</strong><div>${confidence}</div>${sourceLink}`;
 }
 
+function guidanceCell(t) {
+  const matches = Array.isArray(t.guidance_candidates) ? t.guidance_candidates : [];
+  const mapped = t.auto_company || null;
+
+  if (!matches.length) {
+    if (t.guidance_scan_status === "company_not_mapped") {
+      return `<span class="muted">Company not mapped</span>`;
+    }
+    if (t.guidance_scan_status === "outside_scan_window") {
+      return `<span class="muted">Outside guidance window</span>`;
+    }
+    if (t.guidance_scan_status === "mapped_but_no_source") {
+      return `<span class="muted">Mapped; no SEC/IR source</span>`;
+    }
+    if (t.guidance_scan_status === "scanned_no_match") {
+      return `<span class="muted">Scanned — no phrase match</span>`;
+    }
+    return `<span class="muted">No flag</span>`;
+  }
+
+  const badge = t.verified_readout
+    ? `<span class="badge verified">${matches.length} supporting hit${matches.length === 1 ? "" : "s"}</span>`
+    : `<span class="badge review">REVIEW ${matches.length}</span>`;
+
+  const items = matches.slice(0, 3).map(m => {
+    const url = safeUrl(m.url);
+    const rel = String(m.relevance || "LOW").toLowerCase();
+    const date = m.source_date ? ` · ${esc(m.source_date)}` : "";
+    const timing = (m.timing_mentions || []).length
+      ? `<div class="small"><strong>Timing text:</strong> ${esc(m.timing_mentions.join(", "))}</div>`
+      : "";
+    const matchedTerms = (m.matched_trial_terms || []).length
+      ? `<div class="small"><strong>Program match:</strong> ${esc(m.matched_trial_terms.join(", "))}</div>`
+      : "";
+    const source = url
+      ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(m.source_label || m.source_type || "source")}</a>`
+      : esc(m.source_label || m.source_type || "source");
+
+    return `<div class="detailbox">
+      <div><span class="${esc(rel)}"><strong>${esc(m.relevance || "LOW")}</strong></span> · ${source}${date}</div>
+      <div class="small"><strong>${esc(m.phrase || "guidance phrase")}</strong></div>
+      ${timing}${matchedTerms}
+      <div class="small muted">${esc(m.snippet || "")}</div>
+    </div>`;
+  }).join("");
+
+  const autoMap = mapped && mapped.ticker
+    ? `<div class="small muted">Mapped to ${esc(mapped.ticker)} via ${esc(mapped.method || "automatic match")}</div>`
+    : "";
+
+  return `${badge}${autoMap}<details><summary>Review matches</summary>${items}</details>`;
+}
+
 function completionCell(t) {
   const d = Number(t.days_to_primary_completion);
   let cls = "";
@@ -369,8 +432,10 @@ function filteredTrials() {
   let rows = allTrials.filter(t => {
     const searchable = [
       t.nct, t.ticker, t.company, t.sponsor, t.title,
+      t.auto_company?.ticker, t.auto_company?.company,
       ...(t.conditions || []),
-      ...(t.interventions || []).map(x => x.name)
+      ...(t.interventions || []).map(x => x.name),
+      ...(t.guidance_candidates || []).flatMap(x => [x.phrase, x.snippet, ...(x.timing_mentions || [])])
     ].join(" ").toLowerCase();
 
     if (q && !searchable.includes(q)) return false;
@@ -383,6 +448,8 @@ function filteredTrials() {
 
     if (verified === "yes" && !t.verified_readout) return false;
     if (verified === "no" && t.verified_readout) return false;
+    if (verified === "review" && !t.needs_guidance_review) return false;
+    if (verified === "mapped" && !t.auto_company) return false;
 
     return true;
   });
@@ -391,6 +458,7 @@ function filteredTrials() {
   rows.sort((a, b) => {
     if (sort === "verified") {
       return Number(b.verified_readout) - Number(a.verified_readout)
+        || Number(b.needs_guidance_review) - Number(a.needs_guidance_review)
         || (a.days_to_primary_completion ?? 99999) - (b.days_to_primary_completion ?? 99999);
     }
     if (sort === "phase") {
@@ -412,8 +480,9 @@ function render() {
   const trials = filteredTrials();
 
   const html = trials.map(t => {
-    const company = t.company || t.sponsor || "—";
-    const ticker = t.ticker ? `<div class="ticker">${esc(t.ticker)}</div>` : "";
+    const company = t.company || t.auto_company?.company || t.sponsor || "—";
+    const displayTicker = t.ticker || t.auto_company?.ticker || "";
+    const ticker = displayTicker ? `<div class="ticker">${esc(displayTicker)}</div>` : "";
     const sponsorFallback = t.company && t.sponsor && t.company !== t.sponsor
       ? `<div class="small muted">Sponsor: ${esc(t.sponsor)}</div>`
       : "";
@@ -432,6 +501,7 @@ function render() {
       <td>${esc(t.enrollment ?? "—")}</td>
       <td class="nowrap">${completionCell(t)}</td>
       <td>${readoutCell(t)}</td>
+      <td>${guidanceCell(t)}</td>
       <td><a href="${esc(safeUrl(t.url))}" target="_blank" rel="noopener noreferrer">${esc(t.nct)}</a>
           <div class="small muted">updated ${esc(t.last_update_posted || "—")}</div></td>
     </tr>`;
@@ -442,6 +512,7 @@ function render() {
 
   $("statTotal").textContent = allTrials.length.toLocaleString();
   $("statVerified").textContent = allTrials.filter(t => t.verified_readout).length.toLocaleString();
+  $("statReview").textContent = allTrials.filter(t => t.needs_guidance_review).length.toLocaleString();
   $("stat30").textContent = allTrials.filter(t => {
     const d = Number(t.days_to_primary_completion);
     return Number.isFinite(d) && Math.abs(d) <= 30;
@@ -449,9 +520,11 @@ function render() {
   $("statP3").textContent = allTrials.filter(t => (t.phase || []).includes("PHASE3")).length.toLocaleString();
 
   const generated = meta.generated_at_utc ? new Date(meta.generated_at_utc).toLocaleString() : "not yet";
+  const gs = meta.guidance_scan || {};
+  const secText = gs.sec_enabled === false ? "SEC scan OFF — set SEC_USER_AGENT" : `Guidance review flags: ${gs.trials_needing_human_review ?? "—"}`;
   $("footer").textContent =
     `Last generated: ${generated}. Source: ${meta.source || "ClinicalTrials.gov"}. ` +
-    `Automatic window: ${meta.automatic_window_start || "—"} to ${meta.automatic_window_end || "—"}.`;
+    `Automatic window: ${meta.automatic_window_start || "—"} to ${meta.automatic_window_end || "—"}. ` + secText;
 }
 
 ["search", "phase", "horizon", "verified", "sort"].forEach(id => {
@@ -477,4 +550,3 @@ fetch("./trials.json", { cache: "no-store" })
 </script>
 </body>
 </html>
-
