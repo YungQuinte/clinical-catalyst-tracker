@@ -1,1 +1,480 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Upcoming industry-sponsored Phase 2 and Phase 3 clinical-trial catalysts.">
+  <title>Clinical Catalyst Tracker</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0f14;
+      --panel: #111821;
+      --panel2: #151f2b;
+      --border: #263445;
+      --text: #e7edf5;
+      --muted: #8fa0b5;
+      --accent: #63a8ff;
+      --green: #58d68d;
+      --yellow: #f4c95d;
+      --red: #ff7b72;
+      --purple: #c59cff;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #091018 0%, var(--bg) 280px);
+      color: var(--text);
+    }
+
+    .wrap { max-width: 1500px; margin: 0 auto; padding: 32px 20px 60px; }
+    h1 { margin: 0; font-size: clamp(28px, 4vw, 44px); letter-spacing: -0.035em; }
+    .sub { margin-top: 8px; color: var(--muted); max-width: 900px; line-height: 1.5; }
+    .notice {
+      margin: 22px 0;
+      padding: 14px 16px;
+      background: rgba(99,168,255,.08);
+      border: 1px solid rgba(99,168,255,.26);
+      border-radius: 12px;
+      color: #cfe4ff;
+      line-height: 1.45;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin: 22px 0;
+    }
+
+    .stat {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    .stat .n { font-size: 27px; font-weight: 750; }
+    .stat .l { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+    .controls {
+      display: grid;
+      grid-template-columns: minmax(220px, 2fr) repeat(4, minmax(130px, .7fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    input, select {
+      width: 100%;
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 12px;
+      outline: none;
+    }
+
+    input:focus, select:focus { border-color: var(--accent); }
+
+    .table-shell {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--panel);
+    }
+
+    table { width: 100%; border-collapse: collapse; min-width: 1180px; }
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      text-align: left;
+      padding: 11px 12px;
+      color: var(--muted);
+      background: #101823;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    td {
+      vertical-align: top;
+      padding: 13px 12px;
+      border-top: 1px solid #1e2a38;
+      font-size: 14px;
+      line-height: 1.38;
+    }
+
+    tr:hover td { background: rgba(255,255,255,.018); }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .ticker { font-weight: 800; font-size: 15px; }
+    .muted { color: var(--muted); }
+    .small { font-size: 12px; }
+    .drug { font-weight: 650; }
+    .nowrap { white-space: nowrap; }
+
+    .badge {
+      display: inline-block;
+      border: 1px solid var(--border);
+      background: var(--panel2);
+      border-radius: 999px;
+      padding: 3px 8px;
+      margin: 1px 3px 2px 0;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .verified { border-color: rgba(88,214,141,.4); color: var(--green); background: rgba(88,214,141,.08); }
+    .soon { color: var(--yellow); }
+    .past { color: #b6c3d3; }
+    .phase3 { color: var(--purple); }
+
+    details {
+      margin-top: 8px;
+      color: var(--muted);
+    }
+
+    summary {
+      cursor: pointer;
+      color: #afbdd0;
+      user-select: none;
+    }
+
+    .detailbox {
+      margin-top: 8px;
+      padding: 9px 10px;
+      background: #0d141d;
+      border: 1px solid #1f2d3d;
+      border-radius: 9px;
+      max-width: 520px;
+    }
+
+    .empty {
+      padding: 34px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    footer { margin-top: 18px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+    @media (max-width: 950px) {
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .controls { grid-template-columns: 1fr 1fr; }
+      .controls .search { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 560px) {
+      .stats { grid-template-columns: 1fr 1fr; }
+      .controls { grid-template-columns: 1fr; }
+      .controls .search { grid-column: auto; }
+      .wrap { padding: 22px 12px 45px; }
+    }
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+  <h1>Clinical Catalyst Tracker</h1>
+  <div class="sub">
+    Industry-sponsored Phase 2 and Phase 3 trials with a primary-completion date near today.
+    Human-verified company guidance can be added through <code>manual_catalysts.csv</code>.
+  </div>
+
+  <div class="notice">
+    <strong>Important:</strong> a ClinicalTrials.gov <em>Primary Completion Date</em> is not the same as a
+    public topline-results date. Treat automatically discovered trials as candidates. A green
+    <strong>Verified readout</strong> badge means you manually added company-guided timing and a source.
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="n" id="statTotal">—</div><div class="l">Visible candidates</div></div>
+    <div class="stat"><div class="n" id="statVerified">—</div><div class="l">Verified readouts</div></div>
+    <div class="stat"><div class="n" id="stat30">—</div><div class="l">Primary completion ±30 days</div></div>
+    <div class="stat"><div class="n" id="statP3">—</div><div class="l">Phase 3 candidates</div></div>
+  </div>
+
+  <div class="controls">
+    <input class="search" id="search" type="search" placeholder="Search ticker, sponsor, drug, disease, NCT..." autocomplete="off">
+
+    <select id="phase">
+      <option value="">All phases</option>
+      <option value="PHASE2">Phase 2</option>
+      <option value="PHASE3">Phase 3</option>
+    </select>
+
+    <select id="horizon">
+      <option value="">All dates</option>
+      <option value="30">Next 30 days</option>
+      <option value="60">Next 60 days</option>
+      <option value="90">Next 90 days</option>
+      <option value="180">Next 180 days</option>
+    </select>
+
+    <select id="verified">
+      <option value="">All candidates</option>
+      <option value="yes">Verified readout only</option>
+      <option value="no">Unverified only</option>
+    </select>
+
+    <select id="sort">
+      <option value="date">Sort: date</option>
+      <option value="verified">Sort: verified first</option>
+      <option value="phase">Sort: Phase 3 first</option>
+      <option value="enrollment">Sort: enrollment</option>
+    </select>
+  </div>
+
+  <div class="table-shell">
+    <table>
+      <thead>
+        <tr>
+          <th>Ticker / company</th>
+          <th>Drug / intervention</th>
+          <th>Phase</th>
+          <th>Indication</th>
+          <th>Status</th>
+          <th>Enrollment</th>
+          <th>Primary completion</th>
+          <th>Expected readout</th>
+          <th>Trial</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div id="empty" class="empty" hidden>No trials match these filters.</div>
+  </div>
+
+  <footer id="footer">Loading data…</footer>
+</div>
+
+<script>
+"use strict";
+
+let allTrials = [];
+let meta = {};
+
+const $ = id => document.getElementById(id);
+
+function esc(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function safeUrl(value) {
+  try {
+    const u = new URL(String(value || ""));
+    if (u.protocol === "https:" || u.protocol === "http:") return u.href;
+  } catch (_) {}
+  return "";
+}
+
+function prettyPhase(phases) {
+  return (phases || []).map(p => {
+    if (p === "PHASE2") return "Phase 2";
+    if (p === "PHASE3") return "Phase 3";
+    return p;
+  });
+}
+
+function phaseBadges(phases) {
+  return prettyPhase(phases).map(p =>
+    `<span class="badge ${p === "Phase 3" ? "phase3" : ""}">${esc(p)}</span>`
+  ).join("");
+}
+
+function firstDrugs(t) {
+  const names = (t.interventions || []).map(x => x.name).filter(Boolean);
+  if (!names.length) return "—";
+  return names.slice(0, 3).map(esc).join(", ") + (names.length > 3 ? ` <span class="muted">+${names.length - 3}</span>` : "");
+}
+
+function readoutCell(t) {
+  if (!t.expected_readout) {
+    return `<span class="muted">Not verified</span>`;
+  }
+
+  const src = safeUrl(t.source_url);
+  const sourceLink = src
+    ? `<div class="small"><a href="${esc(src)}" target="_blank" rel="noopener noreferrer">source</a></div>`
+    : "";
+
+  const confidence = t.readout_confidence
+    ? `<span class="badge verified">${esc(t.readout_confidence)}</span>`
+    : `<span class="badge verified">Verified readout</span>`;
+
+  return `<strong>${esc(t.expected_readout)}</strong><div>${confidence}</div>${sourceLink}`;
+}
+
+function completionCell(t) {
+  const d = Number(t.days_to_primary_completion);
+  let cls = "";
+  let relative = "";
+
+  if (Number.isFinite(d)) {
+    if (d < 0) {
+      cls = "past";
+      relative = `${Math.abs(d)}d ago`;
+    } else if (d <= 30) {
+      cls = "soon";
+      relative = `in ~${d}d`;
+    } else {
+      relative = `in ~${d}d`;
+    }
+  }
+
+  const precision = t.primary_completion_precision && t.primary_completion_precision !== "DAY"
+    ? `<div class="small muted">${esc(t.primary_completion_precision.toLowerCase())} precision</div>`
+    : "";
+
+  return `<span class="${cls}">${esc(t.primary_completion || "—")}</span>
+          <div class="small muted">${esc(relative)}</div>${precision}`;
+}
+
+function detailBlock(t) {
+  const outcomes = (t.primary_outcomes || []).slice(0, 3);
+  const parts = [];
+
+  if (outcomes.length) {
+    parts.push(`<strong>Primary endpoint</strong><br>${outcomes.map(o =>
+      `${esc(o.measure || "Unnamed endpoint")}${o.timeframe ? ` <span class="muted">(${esc(o.timeframe)})</span>` : ""}`
+    ).join("<br>")}`);
+  }
+
+  const design = [t.allocation, t.masking, t.intervention_model].filter(Boolean).join(" · ");
+  if (design) parts.push(`<strong>Design</strong><br>${esc(design)}`);
+
+  if (t.notes) parts.push(`<strong>Notes</strong><br>${esc(t.notes)}`);
+
+  if (!parts.length) return "";
+
+  return `<details><summary>Details</summary><div class="detailbox">${parts.join("<br><br>")}</div></details>`;
+}
+
+function filteredTrials() {
+  const q = $("search").value.trim().toLowerCase();
+  const phase = $("phase").value;
+  const horizon = Number($("horizon").value || 0);
+  const verified = $("verified").value;
+
+  let rows = allTrials.filter(t => {
+    const searchable = [
+      t.nct, t.ticker, t.company, t.sponsor, t.title,
+      ...(t.conditions || []),
+      ...(t.interventions || []).map(x => x.name)
+    ].join(" ").toLowerCase();
+
+    if (q && !searchable.includes(q)) return false;
+    if (phase && !(t.phase || []).includes(phase)) return false;
+
+    if (horizon) {
+      const d = Number(t.days_to_primary_completion);
+      if (!Number.isFinite(d) || d < 0 || d > horizon) return false;
+    }
+
+    if (verified === "yes" && !t.verified_readout) return false;
+    if (verified === "no" && t.verified_readout) return false;
+
+    return true;
+  });
+
+  const sort = $("sort").value;
+  rows.sort((a, b) => {
+    if (sort === "verified") {
+      return Number(b.verified_readout) - Number(a.verified_readout)
+        || (a.days_to_primary_completion ?? 99999) - (b.days_to_primary_completion ?? 99999);
+    }
+    if (sort === "phase") {
+      const ap3 = (a.phase || []).includes("PHASE3") ? 1 : 0;
+      const bp3 = (b.phase || []).includes("PHASE3") ? 1 : 0;
+      return bp3 - ap3
+        || (a.days_to_primary_completion ?? 99999) - (b.days_to_primary_completion ?? 99999);
+    }
+    if (sort === "enrollment") {
+      return Number(b.enrollment || 0) - Number(a.enrollment || 0);
+    }
+    return (a.days_to_primary_completion ?? 99999) - (b.days_to_primary_completion ?? 99999);
+  });
+
+  return rows;
+}
+
+function render() {
+  const trials = filteredTrials();
+
+  const html = trials.map(t => {
+    const company = t.company || t.sponsor || "—";
+    const ticker = t.ticker ? `<div class="ticker">${esc(t.ticker)}</div>` : "";
+    const sponsorFallback = t.company && t.sponsor && t.company !== t.sponsor
+      ? `<div class="small muted">Sponsor: ${esc(t.sponsor)}</div>`
+      : "";
+
+    const cond = (t.conditions || []).slice(0, 2).map(esc).join(", ") || "—";
+    const extraCond = (t.conditions || []).length > 2
+      ? `<span class="muted"> +${t.conditions.length - 2}</span>`
+      : "";
+
+    return `<tr>
+      <td>${ticker}<div>${esc(company)}</div>${sponsorFallback}${detailBlock(t)}</td>
+      <td class="drug">${firstDrugs(t)}</td>
+      <td>${phaseBadges(t.phase)}</td>
+      <td>${cond}${extraCond}</td>
+      <td><span class="badge">${esc(t.status || "—")}</span></td>
+      <td>${esc(t.enrollment ?? "—")}</td>
+      <td class="nowrap">${completionCell(t)}</td>
+      <td>${readoutCell(t)}</td>
+      <td><a href="${esc(safeUrl(t.url))}" target="_blank" rel="noopener noreferrer">${esc(t.nct)}</a>
+          <div class="small muted">updated ${esc(t.last_update_posted || "—")}</div></td>
+    </tr>`;
+  }).join("");
+
+  $("rows").innerHTML = html;
+  $("empty").hidden = trials.length !== 0;
+
+  $("statTotal").textContent = allTrials.length.toLocaleString();
+  $("statVerified").textContent = allTrials.filter(t => t.verified_readout).length.toLocaleString();
+  $("stat30").textContent = allTrials.filter(t => {
+    const d = Number(t.days_to_primary_completion);
+    return Number.isFinite(d) && Math.abs(d) <= 30;
+  }).length.toLocaleString();
+  $("statP3").textContent = allTrials.filter(t => (t.phase || []).includes("PHASE3")).length.toLocaleString();
+
+  const generated = meta.generated_at_utc ? new Date(meta.generated_at_utc).toLocaleString() : "not yet";
+  $("footer").textContent =
+    `Last generated: ${generated}. Source: ${meta.source || "ClinicalTrials.gov"}. ` +
+    `Automatic window: ${meta.automatic_window_start || "—"} to ${meta.automatic_window_end || "—"}.`;
+}
+
+["search", "phase", "horizon", "verified", "sort"].forEach(id => {
+  $(id).addEventListener(id === "search" ? "input" : "change", render);
+});
+
+fetch("./trials.json", { cache: "no-store" })
+  .then(r => {
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.json();
+  })
+  .then(data => {
+    allTrials = Array.isArray(data.trials) ? data.trials : [];
+    meta = data.meta || {};
+    render();
+  })
+  .catch(err => {
+    console.error(err);
+    $("footer").textContent = "Could not load trials.json. Run the Update Clinical Catalyst Dashboard workflow once.";
+    $("empty").hidden = false;
+    $("empty").textContent = "No data loaded yet.";
+  });
+</script>
+</body>
+</html>
 
