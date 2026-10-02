@@ -1,0 +1,15 @@
+{
+  "meta": {
+    "generated_at_utc": null,
+    "today_utc": null,
+    "source": "ClinicalTrials.gov API v2",
+    "automatic_window_start": null,
+    "automatic_window_end": null,
+    "api_total_before_local_date_filter": null,
+    "visible_trial_count": 0,
+    "manual_entry_count": 0,
+    "unmatched_manual_ncts": [],
+    "note": "Run the GitHub Action once to populate this dashboard."
+  },
+  "trials": []
+}
