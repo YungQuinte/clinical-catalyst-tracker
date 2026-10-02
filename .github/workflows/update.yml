@@ -4,7 +4,6 @@ on:
   workflow_dispatch:
 
   schedule:
-    # Daily at 06:17 Europe/Brussels time.
     - cron: "17 6 * * *"
       timezone: "Europe/Brussels"
 
@@ -13,9 +12,12 @@ on:
       - main
     paths:
       - "update_trials.py"
+      - "verify_guidance.py"
       - "manual_catalysts.csv"
+      - "company_map.csv"
       - "requirements.txt"
-      - "site/**"
+      - "site/index.html"
+      - "site/.nojekyll"
       - ".github/workflows/update.yml"
 
 permissions:
@@ -35,9 +37,16 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
 
+    env:
+      # Create this under:
+      # Settings → Secrets and variables → Actions → Variables
+      # Name: SEC_USER_AGENT
+      # Example value: ClinicalCatalystTracker your-email@example.com
+      SEC_USER_AGENT: ${{ vars.SEC_USER_AGENT }}
+
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v6
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -51,7 +60,10 @@ jobs:
       - name: Refresh ClinicalTrials.gov data
         run: python update_trials.py
 
-      - name: Commit refreshed trials.json when changed
+      - name: Scan SEC filings and company IR pages for readout guidance
+        run: python verify_guidance.py
+
+      - name: Commit refreshed trial data when changed
         shell: bash
         run: |
           if git diff --quiet -- site/trials.json; then
@@ -60,7 +72,7 @@ jobs:
             git config user.name "clinical-catalyst-bot"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add site/trials.json
-            git commit -m "Update clinical catalyst data"
+            git commit -m "Update clinical catalyst data and guidance flags"
             git push
           fi
 
